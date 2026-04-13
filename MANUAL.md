@@ -142,9 +142,3 @@ Este script simulará o envio de dados do Contradef e demonstrará como o `AIAna
 *   **Performance**: A instrumentação dinâmica pode introduzir um *overhead* de performance. O mecanismo de feedback ajuda a mitigar isso, permitindo que a IA ajuste a granularidade da instrumentação.
 *   **Modelo de IA**: O modelo de Machine Learning incluído (`AIAnalyzer.py`) é um exemplo simplificado. Para uso em produção, ele deve ser treinado com um *dataset* real e abrangente de malwares e *softwares* benignos para garantir alta precisão e robustez.
 *   **Ambiente de Produção**: Em um ambiente de produção, a comunicação via Named Pipes seria mais robusta e o `AIAnalyzer.py` poderia ser executado como um serviço em segundo plano.
-
----
-
-**Autor**: Manus AI
-
-**Data**: 13 de abril de 2026
