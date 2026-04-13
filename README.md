@@ -39,9 +39,3 @@ As melhorias implementadas neste projeto visam transformar o Contradef em uma fe
 ## Como Começar
 
 Para instruções detalhadas sobre como configurar o ambiente, compilar o PinTool, instalar as dependências Python e executar o agente de IA, por favor, consulte o arquivo [`MANUAL.md`](./MANUAL.md).
-
----
-
-**Autor**: Manus AI
-
-**Data**: 13 de abril de 2026
