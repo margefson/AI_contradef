@@ -59,6 +59,8 @@ O fluxo de dados e o mecanismo de feedback são ilustrados no diagrama arquitetu
 5.  Com base na análise, o Módulo de Análise de IA pode enviar comandos de feedback de volta para o PinTool através de outro Named Pipe (`AIContradefPipe_feedback`), ajustando a estratégia de instrumentação (e.g., para uma análise mais profunda).
 6.  Os resultados da análise são registrados em **Relatórios Detalhados** e em uma **Base de Dados de Logs**, que podem ser interpretados por um **Analista de Segurança**.
 
+Para uma análise quantitativa e descritiva mais aprofundada das funções chamadas, consulte o documento "Análise Quantitativa e Descritiva das Funções do Malware".
+
 ## 4. Análise da Função `GetTickCount` e seu Papel em Técnicas Evasivas de Timing
 
 A função `GetTickCount` é uma API do Windows que retorna o número de milissegundos decorridos desde que o sistema foi iniciado [1]. Malwares frequentemente a utilizam (e suas variantes como `GetTickCount64`) em rotinas anti-análise, especificamente em técnicas de **anti-timing** ou **anti-sandbox**. A lógica é que ambientes de análise podem introduzir latências ou distorções no tempo de execução, ou podem acelerar a execução para análise mais rápida. Malwares podem explorar essas anomalias para detectar que estão sendo analisados e, então, alterar seu comportamento.
