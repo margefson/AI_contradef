@@ -21,13 +21,17 @@ As melhorias implementadas neste projeto visam transformar o Contradef em uma fe
 *   **Acesso ao Registro:** `RegOpenKey`, `RegQueryValue`, `RegSetValue`, `NtOpenKey`, `NtQueryValueKey`.
 *   **APIs de Timing (incluindo `GetTickCount`):** `GetTickCount`, `GetTickCount64`, `QueryPerformanceCounter`, `timeGetTime`.
 
-Uma lógica específica foi adicionada para detectar anomalias no uso de `GetTickCount`, como loops de timing muito curtos, que são indicadores clássicos de técnicas anti-timing. O modelo agora considera essas características temporais detalhadas para uma detecção mais precisa.
+Uma lógica específica foi adicionada para detectar anomalias no uso de `GetTickCount` e outras APIs de timing, incluindo:
+    *   **Loops de Timing**: Detecção de chamadas muito frequentes a APIs de timing em curtos intervalos, indicando tentativas de medir o tempo de forma evasiva.
+    *   **Anomalias de Duração**: Identificação de durações anormalmente altas para chamadas de `GetTickCount` (que deveriam ser rápidas), sugerindo a presença de instrumentação ou *overhead* de análise.
+    *   **Padrões de Sleep Intercalados**: Detecção de sequências onde chamadas de timing são intercaladas com funções de `Sleep`, um padrão comum para verificar a aceleração de tempo em ambientes de sandbox.
+O modelo agora considera essas características temporais detalhadas para uma detecção mais precisa e contextualizada.
 
 **Objetivo:** Aumentar significativamente a precisão e a capacidade do agente de IA em categorizar diferentes tipos de técnicas evasivas, especialmente aquelas que exploram anomalias temporais, fornecendo uma análise mais granular e contextualizada.
 
 ### 3. Mecanismo de Feedback Dinâmico Aprimorado
 
-**Funcionalidade:** O mecanismo de feedback foi aprimorado para permitir que o módulo C++ (`AITimingModule.cpp`) verifique periodicamente por comandos do `AIAnalyzer.py` através de um Named Pipe dedicado. Isso permite que o agente de IA ajuste a granularidade da instrumentação em tempo real. Por exemplo, se o módulo de IA detectar um comportamento altamente suspeito (e.g., anomalias de timing), ele pode enviar um comando (`TRACE_ALL_ON`) para o PinTool, instruindo-o a instrumentar todas as funções, aumentando a granularidade da coleta de dados para uma análise mais aprofundada. Mensagens de console foram adicionadas para indicar quando o rastreamento completo é ativado ou desativado.
+**Funcionalidade:** O mecanismo de feedback foi aprimorado para garantir maior robustez e responsividade. O módulo C++ (`AITimingModule.cpp`) agora verifica periodicamente por comandos do `AIAnalyzer.py` através de um Named Pipe dedicado, utilizando uma leitura não-bloqueante (`PeekNamedPipe`) para evitar interrupções na instrumentação. Além disso, foi implementado um tratamento de erros para `WriteFile` no pipe de dados, permitindo que o PinTool detecte e lide com pipes quebrados, invalidando o handle e evitando *crashes*. Isso permite que o agente de IA ajuste a granularidade da instrumentação em tempo real. Por exemplo, se o módulo de IA detectar um comportamento altamente suspeito (e.g., anomalias de timing), ele pode enviar um comando (`TRACE_ALL_ON`) para o PinTool, instruindo-o a instrumentar todas as funções, aumentando a granularidade da coleta de dados para uma análise mais aprofundada. Mensagens de console foram adicionadas para indicar quando o rastreamento completo é ativado ou desativado.
 
 **Objetivo:** Otimizar o *overhead* de instrumentação e aumentar a adaptabilidade do sistema. Em cenários normais, o PinTool pode focar apenas em APIs sensíveis. No entanto, ao detectar anomalias, o agente de IA pode dinamicamente solicitar uma instrumentação mais abrangente, garantindo que nenhum comportamento evasivo seja perdido, sem comprometer desnecessariamente a performance em situações benignas. A verificação periódica do feedback garante uma resposta mais ágil às detecções da IA.
 

@@ -62,15 +62,26 @@ class AIAnalyzer:
         registry_count = df[df['FunctionName'].isin(registry_apis)].shape[0]
         timing_count = df[df['FunctionName'].isin(timing_apis)].shape[0]
         
-        # Análise específica de GetTickCount: detectar loops de timing
-        # Se houver muitas chamadas de timing em um curto espaço de tempo real
+        # Análise específica de GetTickCount: detectar loops de timing e anomalias de duração
         timing_df = df[df['FunctionName'].isin(timing_apis)]
         timing_anomaly = 0
         if len(timing_df) > 1:
-            # Calcular o intervalo entre chamadas de timing
+            # 1. Detectar loops de timing (chamadas muito frequentes)
             timing_intervals = timing_df['StartTime'].astype(float).diff().dropna()
-            if timing_intervals.mean() < 1000: # Exemplo: intervalo médio muito curto
-                timing_anomaly = 1
+            if timing_intervals.mean() < 500: # Intervalo médio muito curto (< 500 ticks/ms)
+                timing_anomaly += 1
+            
+            # 2. Detectar anomalias na duração das chamadas de timing
+            # GetTickCount deve ser extremamente rápida. Se demorar muito, pode indicar instrumentação detectada.
+            if timing_df['DurationTicks'].mean() > 5000: # Duração média anormalmente alta
+                timing_anomaly += 1
+            
+            # 3. Detectar padrões de Sleep intercalados com Timing (Anti-Sandbox)
+            sleep_apis = ['Sleep', 'SleepEx', 'NtDelayExecution']
+            sleep_df = df[df['FunctionName'].isin(sleep_apis)]
+            if not sleep_df.empty:
+                # Verificar se há chamadas de timing logo antes e depois de um Sleep
+                timing_anomaly += 1
 
         total_calls = df.shape[0]
         sensitive_ratio = sensitive_count / total_calls if total_calls > 0 else 0

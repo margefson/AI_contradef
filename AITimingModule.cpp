@@ -33,7 +33,14 @@ UINT64 GetHighPrecisionTimestamp() {
 VOID SendDataToAI(std::string data) {
     if (hPipe != INVALID_HANDLE_VALUE) {
         DWORD bytesWritten;
-        WriteFile(hPipe, data.c_str(), (DWORD)data.length(), &bytesWritten, NULL);
+        // Tentar escrever no pipe com verificação de erro
+        if (!WriteFile(hPipe, data.c_str(), (DWORD)data.length(), &bytesWritten, NULL)) {
+            // Se o pipe quebrar, tentar reconectar ou invalidar o handle
+            if (GetLastError() == ERROR_BROKEN_PIPE) {
+                CloseHandle(hPipe);
+                hPipe = INVALID_HANDLE_VALUE;
+            }
+        }
     }
 }
 
@@ -72,17 +79,21 @@ VOID CheckAIFeedback(VOID* v) {
     if (hFeedbackPipe != INVALID_HANDLE_VALUE) {
         char buffer[128];
         DWORD bytesRead;
-        // Tentar ler sem bloquear (PeekNamedPipe ou modo não-bloqueante)
-        if (ReadFile(hFeedbackPipe, buffer, sizeof(buffer)-1, &bytesRead, NULL) && bytesRead > 0) {
-            buffer[bytesRead] = '\0';
-            std::string cmd(buffer);
-            if (cmd == "TRACE_ALL_ON") {
-                traceAllFunctions = TRUE;
-                std::cout << "[AI_FEEDBACK] Ativando rastreamento completo de funções." << std::endl;
-            }
-            else if (cmd == "TRACE_ALL_OFF") {
-                traceAllFunctions = FALSE;
-                std::cout << "[AI_FEEDBACK] Desativando rastreamento completo de funções." << std::endl;
+        DWORD bytesAvailable;
+        
+        // Verificar se há dados disponíveis sem bloquear a execução do PinTool
+        if (PeekNamedPipe(hFeedbackPipe, NULL, 0, NULL, &bytesAvailable, NULL) && bytesAvailable > 0) {
+            if (ReadFile(hFeedbackPipe, buffer, sizeof(buffer)-1, &bytesRead, NULL) && bytesRead > 0) {
+                buffer[bytesRead] = '\0';
+                std::string cmd(buffer);
+                if (cmd.find("TRACE_ALL_ON") != std::string::npos) {
+                    traceAllFunctions = TRUE;
+                    std::cout << "[AI_FEEDBACK] Ativando rastreamento completo de funções." << std::endl;
+                }
+                else if (cmd.find("TRACE_ALL_OFF") != std::string::npos) {
+                    traceAllFunctions = FALSE;
+                    std::cout << "[AI_FEEDBACK] Desativando rastreamento completo de funções." << std::endl;
+                }
             }
         }
     }
