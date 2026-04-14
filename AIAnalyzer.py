@@ -30,23 +30,21 @@ class AIAnalyzer:
     def _train_mock_model(self):
         """
         Treina um modelo mais robusto com características adicionais.
-        X: [Duração Média, Variância do Tempo, Frequência de APIs Sensíveis, 
-            Contagem de APIs de Memória, Contagem de APIs de Processo, 
-            Contagem de APIs de Registro]
+        X: [avg_dur, var_dur, sens_ratio, mem_cnt, proc_cnt, reg_cnt, time_cnt, time_anom]
         """
         X = np.array([
-            [100, 10, 0.05, 0, 0, 0],  # Benigno
-            [8000, 2000, 0.6, 1, 0, 0], # Anti-Debugging (Timing)
-            [300, 80, 0.8, 0, 1, 1],   # Anti-VM / Sandbox
-            [2000, 500, 0.9, 5, 3, 0],  # Injeção de Código
-            [1200, 300, 0.4, 2, 0, 0]   # Packer
+            [100, 10, 0.05, 0, 0, 0, 0, 0],  # Benigno
+            [8000, 2000, 0.6, 1, 0, 0, 10, 1], # Anti-Debugging (Timing)
+            [300, 80, 0.8, 0, 1, 1, 5, 0],   # Anti-VM / Sandbox
+            [2000, 500, 0.9, 5, 3, 0, 2, 0],  # Injeção de Código
+            [1200, 300, 0.4, 2, 0, 0, 1, 0]   # Packer
         ])
         y = np.array([0, 1, 2, 3, 4])
         self.model.fit(X, y)
 
     def extract_features(self, df):
         """
-        Extrai características avançadas do DataFrame de logs.
+        Extrai características avançadas do DataFrame de logs, incluindo análise de GetTickCount.
         """
         avg_duration = df['DurationTicks'].mean()
         var_duration = df['DurationTicks'].var()
@@ -56,16 +54,29 @@ class AIAnalyzer:
         memory_apis = ['VirtualAlloc', 'VirtualAllocEx', 'WriteProcessMemory', 'ReadProcessMemory', 'MapViewOfFile']
         process_apis = ['CreateProcess', 'OpenProcess', 'TerminateProcess', 'CreateRemoteThread', 'NtCreateThreadEx']
         registry_apis = ['RegOpenKey', 'RegQueryValue', 'RegSetValue', 'NtOpenKey', 'NtQueryValueKey']
+        timing_apis = ['GetTickCount', 'GetTickCount64', 'QueryPerformanceCounter', 'timeGetTime']
         
         sensitive_count = df[df['FunctionName'].isin(sensitive_apis)].shape[0]
         memory_count = df[df['FunctionName'].isin(memory_apis)].shape[0]
         process_count = df[df['FunctionName'].isin(process_apis)].shape[0]
         registry_count = df[df['FunctionName'].isin(registry_apis)].shape[0]
+        timing_count = df[df['FunctionName'].isin(timing_apis)].shape[0]
         
+        # Análise específica de GetTickCount: detectar loops de timing
+        # Se houver muitas chamadas de timing em um curto espaço de tempo real
+        timing_df = df[df['FunctionName'].isin(timing_apis)]
+        timing_anomaly = 0
+        if len(timing_df) > 1:
+            # Calcular o intervalo entre chamadas de timing
+            timing_intervals = timing_df['StartTime'].astype(float).diff().dropna()
+            if timing_intervals.mean() < 1000: # Exemplo: intervalo médio muito curto
+                timing_anomaly = 1
+
         total_calls = df.shape[0]
         sensitive_ratio = sensitive_count / total_calls if total_calls > 0 else 0
         
-        features = np.array([[avg_duration, var_duration, sensitive_ratio, memory_count, process_count, registry_count]])
+        # X: [avg_dur, var_dur, sens_ratio, mem_cnt, proc_cnt, reg_cnt, time_cnt, time_anom]
+        features = np.array([[avg_duration, var_duration, sensitive_ratio, memory_count, process_count, registry_count, timing_count, timing_anomaly]])
         return np.nan_to_num(features)
 
     def start_pipe_server(self):

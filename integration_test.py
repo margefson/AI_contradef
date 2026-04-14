@@ -21,8 +21,11 @@ def simulate_contradef_data(pipe_name):
         time.sleep(2)
         
         # Suspeito (Anti-Debugging)
-        print("Simulador: Enviando dados suspeitos...")
+        print("Simulador: Enviando dados suspeitos (Anti-Debugging/Timing)...")
         pipe.write("1001,2000,IsDebuggerPresent,kernel32.dll,8000\n")
+        pipe.write("1001,2100,GetTickCount,kernel32.dll,50\n")
+        pipe.write("1001,2200,GetTickCount,kernel32.dll,50\n")
+        pipe.write("1001,2300,GetTickCount,kernel32.dll,50\n")
         pipe.write("1001,10000,VirtualAlloc,kernel32.dll,2000\n")
         pipe.flush()
         time.sleep(2)

@@ -6,27 +6,30 @@ Este repositório contém um agente de Inteligência Artificial (IA) projetado p
 
 As melhorias implementadas neste projeto visam transformar o Contradef em uma ferramenta mais inteligente e adaptável para a análise de malwares, permitindo a detecção de comportamentos evasivos que dependem de timing ou sequências complexas de chamadas de API.
 
-### 1. IPC (Interprocess Communication) via Named Pipes
+### 1. IPC (Interprocess Communication) via Named Pipes Refinado
 
-**Funcionalidade:** A comunicação entre o módulo de instrumentação em C++ (PinTool) e o módulo de análise de IA em Python agora é realizada através de Named Pipes. Isso estabelece um canal de comunicação eficiente e em tempo real entre os dois componentes.
+**Funcionalidade:** A comunicação entre o módulo de instrumentação em C++ (PinTool) e o módulo de análise de IA em Python foi refinada para utilizar Named Pipes de forma mais robusta. Isso estabelece canais de comunicação bidirecionais eficientes e em tempo real para dados de instrumentação e comandos de feedback.
 
-**Objetivo:** Permitir que os dados de instrumentação (informações sobre chamadas de função, seus tempos de execução, etc.) sejam transmitidos instantaneamente do ambiente instrumentado para o módulo de IA para análise. Isso é crucial para a detecção de técnicas evasivas em tempo de execução, onde a latência mínima é essencial.
+**Objetivo:** Garantir a transmissão instantânea e confiável dos dados de instrumentação para o módulo de IA, e a recepção de comandos de feedback pelo PinTool, minimizando a latência e otimizando a interação para detecção de técnicas evasivas em tempo de execução.
 
-### 2. Modelo de IA Aprimorado com Características Robustas
+### 2. Modelo de IA Aprimorado com Características Robustas e Lógica de `GetTickCount`
 
-**Funcionalidade:** O módulo `AIAnalyzer.py` agora incorpora um modelo de Machine Learning (Random Forest) treinado com um conjunto mais rico de características. Além da duração média e variância das chamadas de função, o modelo considera a frequência e o contexto de chamadas a APIs sensíveis relacionadas a:
+**Funcionalidade:** O módulo `AIAnalyzer.py` agora incorpora um modelo de Machine Learning (Random Forest) treinado com um conjunto ainda mais rico de características. Além da duração média e variância das chamadas de função, o modelo considera a frequência e o contexto de chamadas a APIs sensíveis relacionadas a:
 *   **Anti-Debugging:** `IsDebuggerPresent`, `CheckRemoteDebuggerPresent`, `NtQueryInformationProcess`.
 *   **Manipulação de Memória:** `VirtualAlloc`, `VirtualAllocEx`, `WriteProcessMemory`, `ReadProcessMemory`, `MapViewOfFile`.
 *   **Criação/Manipulação de Processos/Threads:** `CreateProcess`, `OpenProcess`, `TerminateProcess`, `CreateRemoteThread`, `NtCreateThreadEx`.
 *   **Acesso ao Registro:** `RegOpenKey`, `RegQueryValue`, `RegSetValue`, `NtOpenKey`, `NtQueryValueKey`.
+*   **APIs de Timing (incluindo `GetTickCount`):** `GetTickCount`, `GetTickCount64`, `QueryPerformanceCounter`, `timeGetTime`.
 
-**Objetivo:** Aumentar a precisão e a capacidade do agente de IA em categorizar diferentes tipos de técnicas evasivas (e.g., Anti-Debugging por timing, injeção de código, ofuscação, Anti-VM/Sandbox) com base em padrões de comportamento mais complexos e contextuais.
+Uma lógica específica foi adicionada para detectar anomalias no uso de `GetTickCount`, como loops de timing muito curtos, que são indicadores clássicos de técnicas anti-timing. O modelo agora considera essas características temporais detalhadas para uma detecção mais precisa.
 
-### 3. Mecanismo de Feedback Dinâmico
+**Objetivo:** Aumentar significativamente a precisão e a capacidade do agente de IA em categorizar diferentes tipos de técnicas evasivas, especialmente aquelas que exploram anomalias temporais, fornecendo uma análise mais granular e contextualizada.
 
-**Funcionalidade:** O módulo C++ (`AITimingModule.cpp`) é capaz de receber comandos de feedback do `AIAnalyzer.py` através de um Named Pipe dedicado. Por exemplo, se o módulo de IA detectar um comportamento altamente suspeito, ele pode enviar um comando (`TRACE_ALL_ON`) para o PinTool, instruindo-o a instrumentar todas as funções, aumentando a granularidade da coleta de dados para uma análise mais aprofundada.
+### 3. Mecanismo de Feedback Dinâmico Aprimorado
 
-**Objetivo:** Otimizar o *overhead* de instrumentação. Em cenários normais, o PinTool pode focar apenas em APIs sensíveis. No entanto, ao detectar anomalias, o agente de IA pode dinamicamente solicitar uma instrumentação mais abrangente, garantindo que nenhum comportamento evasivo seja perdido, sem comprometer desnecessariamente a performance em situações benignas.
+**Funcionalidade:** O mecanismo de feedback foi aprimorado para permitir que o módulo C++ (`AITimingModule.cpp`) verifique periodicamente por comandos do `AIAnalyzer.py` através de um Named Pipe dedicado. Isso permite que o agente de IA ajuste a granularidade da instrumentação em tempo real. Por exemplo, se o módulo de IA detectar um comportamento altamente suspeito (e.g., anomalias de timing), ele pode enviar um comando (`TRACE_ALL_ON`) para o PinTool, instruindo-o a instrumentar todas as funções, aumentando a granularidade da coleta de dados para uma análise mais aprofundada. Mensagens de console foram adicionadas para indicar quando o rastreamento completo é ativado ou desativado.
+
+**Objetivo:** Otimizar o *overhead* de instrumentação e aumentar a adaptabilidade do sistema. Em cenários normais, o PinTool pode focar apenas em APIs sensíveis. No entanto, ao detectar anomalias, o agente de IA pode dinamicamente solicitar uma instrumentação mais abrangente, garantindo que nenhum comportamento evasivo seja perdido, sem comprometer desnecessariamente a performance em situações benignas. A verificação periódica do feedback garante uma resposta mais ágil às detecções da IA.
 
 ## Estrutura do Repositório
 

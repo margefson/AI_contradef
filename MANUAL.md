@@ -64,20 +64,24 @@ pip install pandas scikit-learn
 
 Este é o componente de instrumentação que roda com o Intel Pin. Ele:
 
-*   Injeta *hooks* em chamadas de função para registrar o tempo de início e fim de sua execução.
+*   Injeta *hooks* em chamadas de função (APIs) para registrar o tempo de início e fim de sua execução.
 *   Utiliza `QueryPerformanceCounter` para obter *timestamps* de alta precisão.
 *   Envia os dados coletados (TID, StartTime, FunctionName, ModuleName, Duration) para o módulo Python via Named Pipe (`\\.\pipe\AIContradefPipe`).
-*   Recebe comandos de feedback do módulo Python via outro Named Pipe (`\\.\pipe\AIContradefPipe_feedback`) para ajustar dinamicamente a instrumentação (e.g., `TRACE_ALL_ON` para instrumentar todas as funções, `TRACE_ALL_OFF` para instrumentar apenas APIs sensíveis).
+*   Recebe comandos de feedback do módulo Python via outro Named Pipe (`\\.\pipe\AIContradefPipe_feedback`) para ajustar dinamicamente a instrumentação (e.g., `TRACE_ALL_ON` para instrumentar todas as funções, `TRACE_ALL_OFF` para instrumentar apenas APIs sensíveis). A verificação de feedback é realizada periodicamente para uma resposta mais ágil.
+*   Implementa uma lógica de instrumentação seletiva, focando em APIs sensíveis por padrão, mas expandindo a cobertura com base no feedback da IA para manter o mínimo *overhead* e evitar detecção.
 
 ### 4.2. `AIAnalyzer.py` (Módulo Python - Análise de IA)
 
 Este script Python é o cérebro do agente de IA. Ele:
 
-*   Cria um servidor de Named Pipe para receber dados em tempo real do `AITimingModule.cpp`.
+*   Cria um servidor de Named Pipe para receber dados em tempo real do `AITimingModule.cpp` e um pipe de feedback para enviar comandos.
 *   Acumula os dados em um buffer e os processa periodicamente.
-*   Extrai características robustas dos dados (duração média, variância, frequência de APIs sensíveis, contagem de APIs de memória/processo/registro).
+*   Extrai características robustas dos dados, incluindo:
+    *   Duração média e variância das chamadas de função.
+    *   Frequência de APIs sensíveis (anti-debugging, memória, processo, registro).
+    *   Lógica específica para detecção de anomalias no uso de APIs de timing como `GetTickCount` (e.g., loops de timing muito curtos).
 *   Utiliza um modelo de Machine Learning (Random Forest) para categorizar o comportamento detectado (Benigno, Anti-Debugging, Anti-VM, Injeção de Código, Ofuscação).
-*   Pode enviar comandos de feedback para o `AITimingModule.cpp` com base na análise (e.g., se um comportamento suspeito for detectado, pode instruir o PinTool a instrumentar mais agressivamente).
+*   Envia comandos de feedback para o `AITimingModule.cpp` com base na análise (e.g., se um comportamento suspeito for detectado, pode instruir o PinTool a instrumentar mais agressivamente).
 
 ### 4.3. `AI_Agent_Integration.py` (Módulo Python - Orquestração)
 

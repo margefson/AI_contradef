@@ -67,7 +67,8 @@ VOID AfterFunctionCall(THREADID tid, ADDRINT instAddr) {
 }
 
 // Função para verificar feedback da IA
-VOID CheckAIFeedback() {
+// Função para verificar feedback da IA de forma periódica
+VOID CheckAIFeedback(VOID* v) {
     if (hFeedbackPipe != INVALID_HANDLE_VALUE) {
         char buffer[128];
         DWORD bytesRead;
@@ -75,8 +76,14 @@ VOID CheckAIFeedback() {
         if (ReadFile(hFeedbackPipe, buffer, sizeof(buffer)-1, &bytesRead, NULL) && bytesRead > 0) {
             buffer[bytesRead] = '\0';
             std::string cmd(buffer);
-            if (cmd == "TRACE_ALL_ON") traceAllFunctions = TRUE;
-            else if (cmd == "TRACE_ALL_OFF") traceAllFunctions = FALSE;
+            if (cmd == "TRACE_ALL_ON") {
+                traceAllFunctions = TRUE;
+                std::cout << "[AI_FEEDBACK] Ativando rastreamento completo de funções." << std::endl;
+            }
+            else if (cmd == "TRACE_ALL_OFF") {
+                traceAllFunctions = FALSE;
+                std::cout << "[AI_FEEDBACK] Desativando rastreamento completo de funções." << std::endl;
+            }
         }
     }
 }
@@ -116,6 +123,9 @@ VOID InitAIModule(std::string pipeName) {
     // Pipe de Feedback (Leitura)
     std::string feedbackPipeName = "\\\\.\\pipe\\" + pipeName + "_feedback";
     hFeedbackPipe = CreateFileA(feedbackPipeName.c_str(), GENERIC_READ, 0, NULL, OPEN_EXISTING, 0, NULL);
+
+    // Registrar uma função periódica para verificar feedback a cada 100ms
+    PIN_AddContextChangeFunction((CONTEXT_CHANGE_CALLBACK)CheckAIFeedback, 0);
 }
 
 VOID FiniAIModule(INT32 code, VOID* v) {
