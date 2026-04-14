@@ -1,6 +1,6 @@
 # AI_contradef: Agente de IA para Análise de Técnicas Evasivas de Malware
 
-Este repositório contém um agente de Inteligência Artificial (IA) projetado para se integrar à ferramenta de instrumentação binária dinâmica (DBI) Contradef. O objetivo principal é aprimorar a capacidade do Contradef de detectar e analisar técnicas evasivas empregadas por malwares em executáveis Windows x64, focando na medição de tempo de execução de funções, logging detalhado e categorização de chamadas de forma furtiva.
+Este repositório contém um agente de Inteligência Artificial (IA) projetado para se integrar à ferramenta de instrumentação binária dinâmica (DBI) Contradef. O objetivo principal é aprimorar a capacidade do Contradef de detectar e analisar técnicas evasivas empregadas por malwares em executáveis Windows x64, focando na medição de tempo de execução de funções, logging detalhado e categorização de chamadas de forma furtiva. Nesta etapa, o projeto passa a incluir também uma **plataforma web de observabilidade em tempo real**, capaz de acompanhar sessões analíticas, classificar técnicas evasivas, destacar anomalias temporais e produzir relatórios narrativos para o analista.
 
 ## Funcionalidades e Objetivos das Melhorias
 
@@ -39,10 +39,18 @@ O modelo agora considera essas características temporais detalhadas para uma de
 
 *   `AITimingModule.cpp`: O código-fonte do PinTool em C++ que realiza a instrumentação, coleta de timing e comunicação via Named Pipes.
 *   `AIAnalyzer.py`: O script Python que implementa o servidor de Named Pipe, o modelo de IA para análise e categorização, e o mecanismo de feedback.
+*   `AIWebBridge.py`: O script Python que conecta o `AIAnalyzer.py` ao dashboard web em tempo real, publicando logs, detecções e alertas para a API do monitoramento.
 *   `AI_Agent_Integration.py`: Um script Python de orquestração que demonstra como iniciar o `AIAnalyzer.py` e executar o Contradef com o PinTool.
 *   `integration_test.py`: Um script de teste para validar a comunicação via Named Pipes e o fluxo de feedback entre os módulos Python.
 *   `MANUAL.md`: Um manual detalhado com instruções passo a passo para configurar, compilar, executar e testar o agente de IA localmente no ambiente Windows.
+*   `VIDEO_SCRIPT.md`: O roteiro utilizado para orientar a produção do vídeo explicativo de execução local.
+*   `AI_contradef_local_runbook.mp4`: Vídeo explicativo com a sequência operacional para subir o agente e o dashboard localmente.
+*   `web-dashboard/`: Diretório recomendado para receber o código exportado da aplicação web de monitoramento em tempo real.
 
 ## Como Começar
 
-Para instruções detalhadas sobre como configurar o ambiente, compilar o PinTool, instalar as dependências Python e executar o agente de IA, por favor, consulte o arquivo [`MANUAL.md`](./MANUAL.md).
+Para instruções detalhadas sobre como configurar o ambiente, compilar o PinTool, instalar as dependências Python e executar o agente de IA, consulte o arquivo [`MANUAL.md`](./MANUAL.md). Para a demonstração visual do processo local, utilize também o vídeo [`AI_contradef_local_runbook.mp4`](./AI_contradef_local_runbook.mp4).
+
+## Plataforma Web em Tempo Real
+
+A aplicação web complementar oferece uma superfície de observabilidade para sessões de malware em andamento. Entre os principais recursos estão o dashboard com logs estruturados, o fluxo de execução categorizado, o painel de detecção com confiança da IA, o histórico de sessões, os alertas automáticos de alta severidade e a geração de relatórios narrativos. O repositório também pode receber o código exportado do dashboard no diretório `web-dashboard/`, centralizando o agente analítico e a camada visual em uma única base versionada.

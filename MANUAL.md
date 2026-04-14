@@ -4,7 +4,7 @@ Este manual detalha os passos necessários para configurar, executar e testar o 
 
 ## 1. Introdução
 
-O projeto visa estender as capacidades do Contradef, permitindo uma análise mais profunda do comportamento de malwares. O agente de IA monitora as chamadas de função, mede seus tempos de execução e utiliza um modelo de Machine Learning para identificar padrões evasivos. A comunicação entre o módulo de instrumentação (C++) e o módulo de análise (Python) é realizada via Named Pipes, permitindo feedback dinâmico para ajustar a instrumentação.
+O projeto visa estender as capacidades do Contradef, permitindo uma análise mais profunda do comportamento de malwares. O agente de IA monitora as chamadas de função, mede seus tempos de execução e utiliza um modelo de Machine Learning para identificar padrões evasivos. A comunicação entre o módulo de instrumentação (C++) e o módulo de análise (Python) é realizada via Named Pipes, permitindo feedback dinâmico para ajustar a instrumentação. Nesta versão, o fluxo também pode ser acompanhado por uma **plataforma web em tempo real**, que recebe os eventos do `AIAnalyzer.py` por meio do script `AIWebBridge.py` e apresenta logs, anomalias temporais, classificações, alertas e relatórios narrativos para o analista.
 
 ## 2. Pré-requisitos
 
@@ -98,6 +98,15 @@ Este script Python atua como o orquestrador do sistema. Ele:
 
 Este script é usado para testar a comunicação entre os módulos C++ e Python, simulando o envio de dados do Contradef e a recepção de feedback pelo módulo C++.
 
+### 4.5. `AIWebBridge.py` (Módulo Python - Integração com o Dashboard Web)
+
+Este script conecta o `AIAnalyzer.py` à aplicação web de monitoramento em tempo real. Ele:
+
+*   Observa os eventos acumulados pelo `AIAnalyzer.py`.
+*   Normaliza classificações para as classes operacionais do dashboard (**Benigno**, **Anti-Debugging**, **Anti-VM**, **Injeção de Código** e **Ofuscação**).
+*   Encaminha logs, detecções e alertas para o endpoint `POST /api/runtime/ingest`.
+*   Permite que a análise local no Windows seja refletida visualmente no painel web, sem alterar o fluxo de instrumentação do Contradef.
+
 ## 5. Execução e Teste Local
 
 Para executar e testar o agente de IA, siga os passos abaixo:
@@ -117,7 +126,31 @@ python AIAnalyzer.py
 
 Este script iniciará o servidor de Named Pipe e aguardará os dados do Contradef. Deixe este terminal aberto.
 
-### 5.3. Executar o Contradef com o PinTool
+### 5.3. Subir a Plataforma Web de Monitoramento
+
+Antes de executar a amostra, suba a plataforma web em um terminal separado:
+
+```bash
+cd C:\AI_contradef_web
+pnpm install
+pnpm db:push
+pnpm dev
+```
+
+Por padrão, a aplicação ficará disponível em `http://localhost:3000`.
+
+### 5.4. Conectar o `AIAnalyzer.py` ao Dashboard Web
+
+Com a aplicação web ativa, abra um quarto terminal e execute o bridge:
+
+```bash
+cd C:\AI_contradef
+python AIWebBridge.py --dashboard-url http://localhost:3000 --sample-name target.exe --session-key sessao-demo
+```
+
+Esse processo encaminha os eventos do `AIAnalyzer.py` para o dashboard em tempo real.
+
+### 5.5. Executar o Contradef com o PinTool
 
 Abra um **novo** terminal e execute o Intel Pin com o seu PinTool (`AITimingModule.dll`) e o executável alvo. Certifique-se de substituir `C:\pin\pin.exe` pelo caminho correto do seu executável Pin e `C:\AI_contradef\AITimingModule.dll` pelo caminho do seu PinTool compilado.
 
@@ -130,7 +163,7 @@ Abra um **novo** terminal e execute o Intel Pin com o seu PinTool (`AITimingModu
 
 Enquanto o `target.exe` estiver em execução, o `AITimingModule.dll` irá instrumentar as chamadas de função e enviar os dados para o `AIAnalyzer.py` através do Named Pipe. Você deverá ver a saída de análise no terminal onde o `AIAnalyzer.py` está rodando.
 
-### 5.4. Teste de Integração (Opcional)
+### 5.6. Teste de Integração (Opcional)
 
 Para testar apenas a comunicação entre os módulos Python e a lógica de feedback, você pode usar o `integration_test.py`.
 
@@ -149,3 +182,6 @@ Este script simulará o envio de dados do Contradef e demonstrará como o `AIAna
 *   **Performance**: A instrumentação dinâmica pode introduzir um *overhead* de performance. O mecanismo de feedback ajuda a mitigar isso, permitindo que a IA ajuste a granularidade da instrumentação.
 *   **Modelo de IA**: O modelo de Machine Learning incluído (`AIAnalyzer.py`) é um exemplo simplificado. Para uso em produção, ele deve ser treinado com um *dataset* real e abrangente de malwares e *softwares* benignos para garantir alta precisão e robustez.
 *   **Ambiente de Produção**: Em um ambiente de produção, a comunicação via Named Pipes seria mais robusta e o `AIAnalyzer.py` poderia ser executado como um serviço em segundo plano.
+*   **Dashboard Web**: O painel web amplia a interpretabilidade da análise ao consolidar fluxo de execução, classificação, alertas e histórico em uma única superfície operacional para o analista.
+*   **Smoke Test Validado**: Consulte também o arquivo `SMOKE_TEST.md` para validar rapidamente a integração ponta a ponta entre `AIAnalyzer.py`, `AIWebBridge.py` e o dashboard web antes de analisar uma amostra real.
+*   **Vídeo Explicativo**: Consulte o arquivo de vídeo incluído no repositório para uma demonstração visual mais completa do processo local passo a passo, incluindo terminais e leitura operacional do dashboard.
